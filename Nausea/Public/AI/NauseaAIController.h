@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -9,6 +8,7 @@
 
 class UActionBrainComponent;
 class UEnemySelectionComponent;
+class URoutineManagerComponent;
 class ACoreCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAIPawnUpdatedSignature, ANauseaAIController*, AIController, ACoreCharacter*, Pawn);
@@ -24,6 +24,7 @@ class NAUSEA_API ANauseaAIController : public AAIController
 //~ Begin AActor Interface
 protected:
 	virtual void BeginPlay() override;
+	virtual void PostInitializeComponents() override;
 //~ End AActor Interface
 
 //~ Begin AController Interface
@@ -31,24 +32,26 @@ public:
 	virtual void SetPawn(APawn* InPawn) override;
 //~ End AController Interface
 
-//~ Begin AController Interface
+//~ Begin AAIController Interface
 public:
-	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
-//~ End AController Interface
+	virtual bool RunBehaviorTree(UBehaviorTree* BTAsset) override;
+	virtual void UpdateControlRotation(float DeltaTime, bool bUpdatePawn) override;
+//~ End AAIController Interface
 
 public:
 	UFUNCTION(BlueprintCallable, Category = AIController)
 	UActionBrainComponent* GetActionBrainComponent() const { return ActionBrainComponent; }
 	UFUNCTION(BlueprintCallable, Category = AIController)
 	UEnemySelectionComponent* GetEnemySelectionComponent() const { return EnemySelectionComponent; }
+	UFUNCTION(BlueprintCallable, Category = AIController)
+	URoutineManagerComponent* GetRoutineManagerComponent() const { return RoutineManagerComponent; }
+
+	UFUNCTION(BlueprintCallable, Category = AIController)
+	float GetMaxRotationRate() const;
 
 public:
 	UPROPERTY(BlueprintAssignable)
 	FAIPawnUpdatedSignature OnPawnUpdated;
-
-protected:
-	UPROPERTY(EditDefaultsOnly, Category = AIController)
-	TSubclassOf<UEnemySelectionComponent> EnemySelectionComponentClass = nullptr;
 
 private:
 	UPROPERTY(VisibleDefaultsOnly, Category = BrainComponent)
@@ -56,4 +59,7 @@ private:
 
 	UPROPERTY(VisibleDefaultsOnly, Category = BrainComponent)
 	UEnemySelectionComponent* EnemySelectionComponent = nullptr;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = BrainComponent)
+	URoutineManagerComponent* RoutineManagerComponent = nullptr;
 };

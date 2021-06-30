@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -18,7 +17,7 @@ class NAUSEA_API UReplicatedFireMode : public UFireMode
 //~ Begin UObject Interface
 protected:
 	virtual bool IsSupportedForNetworking() const { return true; }
-	virtual int32 GetFunctionCallspace(UFunction* Function, void* Parameters, FFrame* Stack) override;
+	virtual int32 GetFunctionCallspace(UFunction* Function, FFrame* Stack) override;
 	virtual bool CallRemoteFunction(UFunction* Function, void* Parameters, FOutParmRec* OutParms, FFrame* Stack) override;
 //~ End UObject Interface
 

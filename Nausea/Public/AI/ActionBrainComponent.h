@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -44,7 +43,7 @@ NAUSEA_API DECLARE_LOG_CATEGORY_EXTERN(LogActionBrain, Warning, All);
 /**
  * UActionBrainComponent is a version of UPawnActionsComponent but is rewritten to be a more standardized UBrainComponent.
  */
-UCLASS()
+UCLASS(BlueprintType, Blueprintable, meta=(BlueprintSpawnableComponent))
 class NAUSEA_API UActionBrainComponent : public UBrainComponent
 {
 	GENERATED_UCLASS_BODY()
@@ -60,15 +59,13 @@ public:
 	void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 //~ End UActorComponent Interface
 
-public:
-	UFUNCTION(BlueprintCallable, Category = ActionBrainComponent)
-	void StartLogic();
 //~ Begin UBrainComponent Interface
 public:
+	virtual void StartLogic() override;
+	virtual void RestartLogic() override;
 	virtual bool IsRunning() const override;
 	virtual bool IsPaused() const override;
 	virtual void StopLogic(const FString& Reason) override;
-	virtual void RestartLogic() override;
 	virtual void Cleanup() override;
 	virtual void PauseLogic(const FString& Reason) override;
 	virtual EAILogicResuming::Type ResumeLogic(const FString& Reason) override;
@@ -84,6 +81,9 @@ public:
 
 	EPawnActionAbortState::Type AbortAction(UActionBrainComponentAction* ActionToAbort);
 	EPawnActionAbortState::Type ForceAbortAction(UActionBrainComponentAction* ActionToAbort);
+
+	UFUNCTION(BlueprintCallable, Category = ActionBrainComponent)
+	int32 AbortActionsInstigatedBy(UObject* const Instigator, TEnumAsByte<EAIRequestPriority::Type> Priority);
 
 protected:
 	UFUNCTION()
@@ -107,7 +107,7 @@ private:
 	UActionBrainComponentAction* CurrentAction;
 
 	UPROPERTY()
-	bool bRunning = false;
+	bool bIsRunning = false;
 
 	UPROPERTY()
 	bool bPaused = false;

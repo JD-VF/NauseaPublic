@@ -1,6 +1,3 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
-
 #pragma once
 
 #include "StatusType.generated.h"
@@ -8,10 +5,28 @@
 UENUM(BlueprintType)
 enum class EStatusType : uint8
 {
+	Invalid,
 	Slow,
 	Stun,
 	Flinch,
 	Burn,
-	Test,
+	Poison,
+	NonGeneric,
 	MAX
+};
+
+UENUM(BlueprintType)
+enum class EStatusBeginType : uint8
+{
+	Invalid,
+	Initial,
+	Refresh
+};
+
+UENUM(BlueprintType)
+enum class EStatusEndType : uint8
+{
+	Invalid,
+	Expired,
+	Interrupted
 };

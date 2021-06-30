@@ -1,13 +1,14 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Player/PlayerOwnershipInterface.h"
 #include "CoreCharacterComponent.generated.h"
 
 class ACoreCharacter;
+class AController;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FComponentEndPlaySignature, UCoreCharacterComponent*, Component, EEndPlayReason::Type, Reason);
 
@@ -15,7 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FComponentEndPlaySignature, UCoreCh
  * Component for player-owned components. Contains helpful API and convenience.
 */
 UCLASS()
-class NAUSEA_API UCoreCharacterComponent : public UActorComponent
+class NAUSEA_API UCoreCharacterComponent : public UActorComponent, public IPlayerOwnershipInterface
 {
 	GENERATED_UCLASS_BODY()
 
@@ -30,6 +31,13 @@ protected:
 public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 //~ End UActorComponent Interface.
+
+//~ Begin IPlayerOwnershipInterface Interface.
+public:
+	virtual ACorePlayerState* GetOwningPlayerState() const override;
+	virtual AController* GetOwningController() const override;
+	virtual APawn* GetOwningPawn() const override;
+//~ End IPlayerOwnershipInterface Interface.
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Component)
@@ -53,6 +61,9 @@ public:
 public:
 	UPROPERTY(BlueprintAssignable, Category = Component)
 	FComponentEndPlaySignature OnComponentEndPlay;
+
+protected:
+	void UpdateOwningCharacter();
 
 private:
 	UPROPERTY()

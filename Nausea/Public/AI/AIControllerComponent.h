@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -10,7 +9,7 @@
 class ANauseaAIController;
 class ACoreCharacter;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup=(Custom), Blueprintable, BlueprintType)
 class NAUSEA_API UAIControllerComponent : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
@@ -27,7 +26,9 @@ public:
 
 protected:
 	UFUNCTION()
-	virtual void OnPawnUpdated(ANauseaAIController* AIController, ACoreCharacter* InCharacter) {}
+	virtual void OnPawnUpdated(ANauseaAIController* AIController, ACoreCharacter* InCharacter) { K2_OnPawnUpdated (AIController, InCharacter); }
+	UFUNCTION(BlueprintImplementableEvent, Category = AIComponent, meta = (DisplayName="On Pawn Updated", ScriptName="OnPawnUpdate"))
+	void K2_OnPawnUpdated(ANauseaAIController* AIController, ACoreCharacter* InCharacter);
 
 private:
 	UPROPERTY(Transient)

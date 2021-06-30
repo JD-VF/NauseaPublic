@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -7,7 +6,7 @@
 #include "UI/CoreUserWidget.h"
 #include "PawnUserWidget.generated.h"
 
-class ANauseaPlayerController;
+class ACorePlayerController;
 class ACoreCharacter;
 
 /**
@@ -25,7 +24,7 @@ public:
 
 protected:
 	UFUNCTION()
-	virtual void PossessedPawn(ANauseaPlayerController* PlayerController, ACoreCharacter* Pawn);
+	virtual void PossessedPawn(ACorePlayerController* PlayerController, ACoreCharacter* Pawn);
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCosmetic, Category = Widget, meta = (DisplayName = "On Possessed Pawn", ScriptName = "OnPossessedPawn"))
 	void K2_OnPossessedPawn(ACoreCharacter* Pawn);
 };

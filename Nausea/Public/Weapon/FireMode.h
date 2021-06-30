@@ -1,25 +1,25 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Tickable.h"
+#include "Player/PlayerOwnershipInterface.h"
 #include "WeaponTypes.h"
 #include "FireMode.generated.h"
 
 class UWeapon;
 class ACoreCharacter;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBeginFireSignature, UFireMode*, FireMode);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEndFireSignature, UFireMode*, FireMode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFireBeginSignature, UFireMode*, FireMode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFireEndSignature, UFireMode*, FireMode);
 
 /**
  * 
  */
 UCLASS(BlueprintType, Blueprintable, EditInlineNew, DefaultToInstanced, AutoExpandCategories = (Default))
-class NAUSEA_API UFireMode : public UObject, public FTickableGameObject
+class NAUSEA_API UFireMode : public UObject, public FTickableGameObject, public IPlayerOwnershipInterface
 {
 	GENERATED_UCLASS_BODY()
 
@@ -40,11 +40,24 @@ public:
 	virtual UWorld* GetTickableGameObjectWorld() const override { return GetWorld(); }
 //~ End FTickableGameObject Interface
 
+//~ Begin IPlayerOwnershipInterface Interface.
 public:
+	virtual ACorePlayerState* GetOwningPlayerState() const override;
+	virtual AController* GetOwningController() const override;
+	virtual APawn* GetOwningPawn() const override;
+//~ End IPlayerOwnershipInterface Interface.
+
+public:
+	virtual void RegisterOwningWeaponClass(const UWeapon* Weapon);
+	TSubclassOf<UWeapon> GetOwningWeaponClass() const { return OwningWeaponClass; }
+
 	virtual void Initialize(UWeapon* Weapon);
 
 	UFUNCTION(BlueprintCallable, Category = FireMode)
 	FORCEINLINE UWeapon* GetOwningWeapon() const { return OwningWeapon; }
+
+	UFUNCTION(BlueprintCallable, Category = FireMode)
+	FORCEINLINE EFireMode GetFireMode() const { return FireMode; }
 
 	UFUNCTION(BlueprintCallable, Category = FireMode)
 	FORCEINLINE ACoreCharacter* GetOwningCharacter() const { return OwningCharacter; }
@@ -59,11 +72,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = FireMode)
 	FORCEINLINE bool IsHoldingFire() const { return bHoldingFire; }
 
-	UFUNCTION(BlueprintCallable, Category = FireMode)
-	virtual bool IsFiring() const;
-	//If returns false if put away should be blocked from occuring. If this can ever be false firemode should callback to weapon when its task is complete.
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = FireMode)
+	bool IsFiring() const;
+	//If returns false if put away should be blocked from occurring. If this can ever be false firemode should callback to weapon when its task is complete.
 	UFUNCTION(BlueprintCallable, Category = FireMode)
 	virtual bool CanPutDown() const;
+	//Returns true if any weapon actions are being blocked by this firemode.
+	UFUNCTION(BlueprintCallable, Category = FireMode)
+	virtual bool BlockAction(const UFireMode* InstigatorFireMode) const;
+	//Should we bypass checks on this fire mode to block other fire modes?
+	UFUNCTION(BlueprintCallable, Category = FireMode)
+	bool ShouldBlockOtherFireModeAction() const { return bBlockActionsWhenFiring; }
+	//Should we bypass checks on other fire modes that might be blocking our fire?
+	UFUNCTION(BlueprintCallable, Category = FireMode)
+	bool IgnoresFireModeActionBlock() const { return bIgnoreFireModeActionBlock; }
 
 	UFUNCTION(BlueprintCallable, Category = FireMode)
 	virtual bool CanFire() const;
@@ -76,16 +98,27 @@ public:
 	UFUNCTION()
 	virtual void ForceEndFire();
 	
+	//These don't do anything for now. There's an implementation in UWeaponFire for reference.
+	UFUNCTION()
+	virtual bool Reload() { return false; }
+	UFUNCTION()
+	virtual bool StopReload() { return false; }
+
 	UFUNCTION()
 	void ClearHoldingFire() { bHoldingFire = false; }
 
+	UFUNCTION(BlueprintCallable, Category = FireMode)
+	TAssetSubclassOf<UUserWidget> GetCrosshairWidget() const { return CrosshairWidget; }
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = FireMode)
-	FBeginFireSignature OnFireStart;
+	FFireBeginSignature OnFireStart;
 	UPROPERTY(BlueprintAssignable, Category = FireMode)
-	FEndFireSignature OnFireComplete;
+	FFireEndSignature OnFireComplete;
 
 protected:
+	UFUNCTION()
+	virtual void OnFireCosmetic() {}
 	UFUNCTION()
 	virtual void FireComplete();
 
@@ -124,6 +157,18 @@ protected:
 	UPROPERTY(Transient)
 	bool bTickEnabled = false;
 
+	ETickableTickType TickType = ETickableTickType::Never;
+	
+	//Should this fire mode stop other weapon actions when firing?
+	UPROPERTY(EditDefaultsOnly, Category = FireMode)
+	bool bBlockActionsWhenFiring = true;
+	//Should this fire mode ignore other fire modes that are blocking fire?
+	UPROPERTY(EditDefaultsOnly, Category = FireMode)
+	bool bIgnoreFireModeActionBlock = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = UI)
+	TAssetSubclassOf<UUserWidget> CrosshairWidget;
+
 private:
 	UWorld* GetWorld_Uncached() const;
 
@@ -135,8 +180,12 @@ private:
 	UPROPERTY(Transient)
 	ACoreCharacter* OwningCharacter = nullptr;
 
-	ETickableTickType TickType = ETickableTickType::Never;
 
 	UPROPERTY(Transient)
+	EFireMode FireMode = EFireMode::MAX;
+	UPROPERTY(Transient)
 	bool bHoldingFire = false;
+
+	UPROPERTY(Transient)
+	TSubclassOf<UWeapon> OwningWeaponClass = nullptr;
 };

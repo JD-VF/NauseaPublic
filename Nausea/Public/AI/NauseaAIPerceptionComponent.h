@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -19,7 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FReceivedDamageFromActorSignature, 
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class NAUSEA_API UNauseaAIPerceptionComponent : public UAIPerceptionComponent
 {
 	GENERATED_UCLASS_BODY()
@@ -43,7 +42,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Perception)
 	static bool IsUsableStimulus(const FAIStimulus& Stimulus) { return Stimulus.IsValid() && Stimulus.IsActive() && !Stimulus.IsExpired(); }
 
-	const FActorPerceptionInfo* GetActorPerceptionInfo(const AActor* Actor) const { return GetPerceptualData().Find(reinterpret_cast<uint64>(Actor)); }
+	const FActorPerceptionInfo* GetActorPerceptionInfo(const AActor* Actor) const { return GetPerceptualData().Find(TObjectKey<AActor>(Actor)); }
 
 public:
 	UPROPERTY(BlueprintAssignable)

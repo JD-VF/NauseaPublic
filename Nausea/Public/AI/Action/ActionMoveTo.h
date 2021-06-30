@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 
 #pragma once
@@ -108,7 +108,12 @@ protected:
 	virtual EPathFollowingRequestResult::Type RequestMove(AAIController* Controller);
 	
 	bool PerformMoveAction();
+
+	UFUNCTION()
 	void DeferredPerformMoveAction();
+
+	UFUNCTION()
+	void OnActionDataObjectReady(UActionBrainDataObject* DataObject);
 
 	void TryToRepath();
 	void ClearPendingRepath();

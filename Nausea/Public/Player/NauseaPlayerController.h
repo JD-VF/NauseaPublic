@@ -1,54 +1,41 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerController.h"
+#include "Player/CorePlayerController.h"
 #include "NauseaPlayerController.generated.h"
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerPawnUpdatedSignature, ANauseaPlayerController*, PlayerController, ACoreCharacter*, Pawn);
-
-class ANauseaPlayerCameraManager;
 
 /**
  * 
  */
-UCLASS()
-class NAUSEA_API ANauseaPlayerController : public APlayerController
+UCLASS(Config=Game)
+class NAUSEA_API ANauseaPlayerController : public ACorePlayerController
 {
 	GENERATED_UCLASS_BODY()
 
-//~ Begin AActor Interface	
-public:
-	virtual void CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult) override;
-//~ End AActor Interface
-
-//~ Begin AController Interface
-public:
-	virtual void SetPawn(APawn* InPawn) override;
-//~ End AController Interface
+	//Any children of this sort of action has full access to this class' protected members.
+	friend class APlayerControllerAsyncAction;
 
 //~ Begin APlayerController Interface
 public:
-	virtual void AcknowledgePossession(APawn* InPawn) override;
 	virtual void SpawnPlayerCameraManager() override;
-	virtual void SetCameraMode(FName NewCamMode) override;
-	virtual void ClientSetCameraMode_Implementation(FName NewCamMode) { SetCameraMode(NewCamMode); }
 //~ End APlayerController Interface
 
 public:
 	UFUNCTION(BlueprintCallable, Category = PlayerController)
-	ANauseaPlayerCameraManager* GetPlayerCameraManager() const;
+	ANauseaPlayerCameraManager* GetNauseaPlayerCameraManager() const;
 
-	void ForceCameraMode(FName NewCameraMode);
+	UFUNCTION(BlueprintCallable, Category = PlayerController)
+	virtual void SetIsReady(bool bIsReady);
 
-	UFUNCTION(exec)
-	void ExecSetCameraMode(const FString& NewCameraMode);
+protected:
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_Reliable_SetIsReady(bool bIsReady);
 
-public:
-	UPROPERTY(BlueprintAssignable, Category = PlayerController)
-	FPlayerPawnUpdatedSignature OnPawnUpdated;
+protected:
+	UPROPERTY()
+	FTimerHandle DeathCameraTimer;
 
 private:
 	UPROPERTY()

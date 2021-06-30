@@ -5,9 +5,15 @@ using UnrealBuildTool;
 public class Nausea : ModuleRules
 {
 	public Nausea(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+    {
+        DefaultBuildSettings = BuildSettingsVersion.V2;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NavigationSystem", "UMG" });
-	}
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NavigationSystem", "UMG", "GameplayDebugger"});
+
+        //Included for editor drawing code.
+        if (Target.Type == TargetType.Editor)
+        {
+            PublicDependencyModuleNames.AddRange(new string[] { "RenderCore", "RHI", "UnrealEd"});
+        }
+    }
 }

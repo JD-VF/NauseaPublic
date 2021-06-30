@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -9,6 +8,9 @@
 #include "InventoryManagerComponent.generated.h"
 
 class UInputComponent;
+class ACorePlayerState;
+class UPlayerClassComponent;
+class ACoreCharacter;
 class UInventory;
 class UWeapon;
 
@@ -77,8 +79,14 @@ public:
 
 public:
 	UFUNCTION()
+	virtual void SetPlayerDefaults();
+	UFUNCTION()
 	virtual void InitializeInventory();
-	
+	UFUNCTION()
+	void BindToPlayerClass(ACorePlayerState* PlayerState);
+	UFUNCTION()
+	void OnPlayerClassChanged(ACorePlayerState* PlayerState, UPlayerClassComponent* PlayerClassComponent);
+
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = InventoryManager)
 	virtual bool AddInventory(TSubclassOf<UInventory> InventoryClass, bool bDispatchOnRep = true);
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = InventoryManager)
@@ -89,19 +97,37 @@ public:
 
 	UFUNCTION()
 	virtual void EquipNextWeapon(EWeaponGroup Group);
+	
+	UFUNCTION()
+	virtual void SetCurrentWeapon(UWeapon* DesiredWeapon);
+	UFUNCTION()
+	virtual void SetPendingWeapon(UWeapon* DesiredWeapon);
 
 	UFUNCTION()
 	virtual void StartFire(EFireMode FireMode);
 	UFUNCTION()
 	virtual void StopFire(EFireMode FireMode);
+	UFUNCTION()
+	virtual void StartReload(EFireMode FireMode);
+	UFUNCTION()
+	virtual void StopReload(EFireMode FireMode);
 
 	UFUNCTION(BlueprintCallable, Category = InventoryManager)
 	FORCEINLINE UWeapon* GetCurrentWeapon() const { return CurrentWeapon; }
 	UFUNCTION(BlueprintCallable, Category = InventoryManager)
 	FORCEINLINE UWeapon* GetPendingWeapon() const { return PendingWeapon; }
 	//Gets best weapon that is not currently equipped.
+
+	UFUNCTION(BlueprintCallable, Category = InventoryManager)
+	float GetMovementSpeedModifier() const;
+	UFUNCTION(BlueprintCallable, Category = InventoryManager)
+	void RequestMovementSpeedModifierUpdate() { bUpdateMovementSpeedModifier = true; }
+	UFUNCTION()
+	void ProcessMovementSpeed(const ACoreCharacter* CoreCharacter, float& Multiplier) const;
+
 	UFUNCTION()
 	virtual UWeapon* GetNextBestWeapon() const;
+
 
 	UFUNCTION(BlueprintCallable, Category = InventoryManager)
 	virtual bool ContainsInventory(UInventory* Inventory) const;
@@ -110,7 +136,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = InventoryManager)
 	const TMap<EWeaponGroup, FWeaponGroupArray>& GetWeaponGroupMap() const { return WeaponGroupMap; }
-	
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = Inventory)
 	FInventoryAddedSignature OnInventoryAdded;
@@ -139,6 +165,17 @@ protected:
 		StopFire(Index);
 	}
 
+	template<EFireMode Index>
+	void StartReload()
+	{
+		StartReload(Index);
+	}
+	template<EFireMode Index>
+	void StopReload()
+	{
+		StopReload(Index);
+	}
+
 	template<EWeaponGroup Group>
 	void EquipNextWeapon()
 	{
@@ -146,13 +183,13 @@ protected:
 	}
 
 	UFUNCTION()
-	virtual void SetCurrentWeapon(UWeapon* DesiredWeapon);
-	UFUNCTION()
 	virtual void WeaponEquipComplete(UWeapon* Weapon);
 	UFUNCTION()
 	virtual void WeaponPutDownComplete(UWeapon* Weapon);
 	UFUNCTION()
 	virtual void ChangedWeapon();
+	UFUNCTION()
+	virtual void OnWeaponChangedCosmetic(UWeapon* Weapon);
 
 	void BindWeaponEvents();
 	void UnBindWeaponEvents();
@@ -163,9 +200,12 @@ protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_Reliable_WeaponEquipped(UWeapon* DesiredWeapon);
 	UFUNCTION()
-	virtual void SetPendingWeapon(UWeapon* DesiredWeapon);
+	virtual void WeaponAwaitingPutDown(UWeapon* Weapon);
+
+	UFUNCTION(Client, Reliable)
+	void Client_Reliable_CurrentWeaponSet(UWeapon* Weapon);
 	UFUNCTION()
-	virtual void WeaponFireComplete(UWeapon* Weapon);
+	void CheckWeaponSynchronization();
 
 	UFUNCTION()
 	virtual void OnRep_InventoryList();
@@ -177,8 +217,14 @@ protected:
 	UFUNCTION()
 	virtual void OnInventoryEndPlay(UCoreCharacterComponent* Component, EEndPlayReason::Type Reason);
 
+	UFUNCTION()
+	virtual void OnCharacterDied(UStatusComponent* Component, float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
+
 	UFUNCTION(BlueprintCallable, Category = Inventory, meta = (DisplayName = "Get Array", ScriptName = "GetArray"))
 	static void GetArrayFromWeaponGroup(const FWeaponGroupArray& WeaponGroup, TArray<UWeapon*>& Array);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = Inventory)
+	static FText GetWeaponGroupTitle(EWeaponGroup WeaponGroup);
 
 protected:
 	//Currently equipped weapon
@@ -198,7 +244,17 @@ protected:
 	UPROPERTY(Transient)
 	TMap<EWeaponGroup, FWeaponGroupArray> WeaponGroupMap;
 
+	UPROPERTY(Transient)
+	mutable float CachedMovementSpeedModifier = 1.f;
+	UPROPERTY(Transient)
+	mutable bool bUpdateMovementSpeedModifier = true;
+
 private:
 	UPROPERTY(Transient)
 	UInputComponent* CurrentInputComponent = nullptr;
+	UPROPERTY(Transient)
+	TSet<EFireMode> CurrentlyHeldFireSet;
+
+	UPROPERTY(Transient)
+	UWeapon* CurrentServerWeapon = NULL;
 };

@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -7,14 +6,14 @@
 #include "AIControllerComponent.h"
 #include "EnemySelectionComponent.generated.h"
 
-class ISelectableEnemyInterface;
+class IAITargetInterface;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyChangedSignature, UEnemySelectionComponent*, EnemySelectionComponent, AActor*, NewEnemy, AActor*, PreviousEnemy);
 
 /*
 * Base class for all enemy selection AI systems.
 */
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS()
 class NAUSEA_API UEnemySelectionComponent : public UAIControllerComponent
 {
 	GENERATED_UCLASS_BODY()
@@ -39,7 +38,7 @@ public:
 	UFUNCTION()
 	virtual AActor* FindBestEnemy() const;
 
-	ISelectableEnemyInterface* GetEnemyInterface() const;
+	IAITargetInterface* GetEnemyInterface() const;
 
 	//Attempts to set enemy to New Enemy. Returns false if fails.
 	//If nullptr is passed as New Enemy, will attempt to set enemy as result of FindBestEnemy() instead.
@@ -47,7 +46,7 @@ public:
 	virtual bool SetEnemy(AActor* NewEnemy, bool bForce = false);
 	//Will clear out current enemy. Does not guarantee enemy will stay cleared, however.
 	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
-	virtual void ClearEnemy();
+	virtual bool ClearEnemy(bool bForce = false);
 	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
 	virtual bool CanChangeEnemy() const;
 	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
@@ -62,6 +61,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
 	bool IsEnemyChangeCooldownActive() const;
 
+	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
+	bool LockEnemySelection(UObject* Requester = nullptr);
+	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
+	bool UnlockEnemySelection(UObject* Requester = nullptr);
+	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
+	void ClearEnemySelectionLock();
+	UFUNCTION(BlueprintCallable, Category = EnemySelectionComponent)
+	bool IsEnemySelectionLocked() const;
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = EnemySelectionComponent)
 	FEnemyChangedSignature OnEnemyChanged;
@@ -71,18 +79,23 @@ protected:
 	virtual void OnEnemyTargetableStateChanged(AActor* Actor, bool bTargetable);
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnemySelectionComponent)
+	bool bFindEnemyOnPosses = true;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnemySelectionComponent, meta = (PinHiddenByDefault, InlineEditConditionToggle))
 	bool bEnemyChangeCooldown = true;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnemySelectionComponent, meta = (EditCondition = bEnemyChangeCooldown))
-	float EnemyChangeCooldown = 4.f; 
+	float EnemyChangeCooldown = 4.f;
 
 private:
 	UPROPERTY()
 	ACoreCharacter* CurrentCharacter = nullptr;
 
 	UPROPERTY(Transient)
-	TScriptInterface<ISelectableEnemyInterface> CurrentEnemy = TScriptInterface<ISelectableEnemyInterface>(nullptr);
+	TScriptInterface<IAITargetInterface> CurrentEnemy = TScriptInterface<IAITargetInterface>(nullptr);
 
 	UPROPERTY()
 	FTimerHandle EnemyCooldownTimerHandle;
+
+	UPROPERTY()
+	TSet<UObject*> EnemySelectionLockSet;
 };

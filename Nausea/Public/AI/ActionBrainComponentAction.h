@@ -1,5 +1,4 @@
-// Copyright 2019-2020 Jean-David Veilleux-Foppiano. All Rights Reserved.
-
+// Copyright 2020-2021 Jean-David Veilleux-Foppiano. All Rights Reserved.
 
 #pragma once
 
@@ -11,9 +10,12 @@
 #include "ActionBrainComponentAction.generated.h"
 
 class UActionBrainComponent;
+class UActionBrainDataObject;
 class ACoreCharacter;
 
 NAUSEA_API DECLARE_LOG_CATEGORY_EXTERN(LogActionBrainAction, Warning, All);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FActionFinishedSignature, UActionBrainComponentAction*, Action, TEnumAsByte<EPawnActionResult::Type>, Result);
 
 /**
  * 
@@ -34,6 +36,9 @@ public:
 public:
 	UFUNCTION(BlueprintCallable, Category = Action, meta = (WorldContext = "WorldContextObject", CallableWithoutWorldContext, DeterminesOutputType = "ActionClass"))
 	static UActionBrainComponentAction* CreateAction(const UObject* WorldContextObject, TSubclassOf<UActionBrainComponentAction> ActionClass);
+
+	UFUNCTION(BlueprintCallable, Category = Action)
+	bool SetDataObject(UActionBrainDataObject* DataObject);
 
 	FORCEINLINE const UActionBrainComponentAction* GetParentAction() const { return ParentAction; }
 	FORCEINLINE const UActionBrainComponentAction* GetChildAction() const { return ChildAction; }
@@ -61,7 +66,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Action)
 	virtual FString GetDisplayName() const;
 	UFUNCTION(BlueprintCallable, Category = Action)
-	virtual FString GetDebugInfoString(int32 Depth) const;
+	FString GetDebugInfoString(int32 Depth) const;
 
 	static FString GetNoneActionInfoString(int32 Depth) { return FString::ChrN(Depth * 4, ' ') + FString("(None)\n"); }
 
@@ -75,6 +80,8 @@ public:
 	FORCEINLINE UActionBrainComponent* GetOwnerComponent() const { return OwnerComponent; }
 	UFUNCTION(BlueprintCallable, Category = Action)
 	FORCEINLINE UObject* GetInstigator() const { return Instigator; }
+	UFUNCTION(BlueprintCallable, Category = Action)
+	FORCEINLINE UActionBrainDataObject* GetDataObject() const { return ActionDataObject; }
 
 	UFUNCTION(BlueprintCallable, Category = Action)
 	ACoreCharacter* GetPawn() const;
@@ -91,6 +98,10 @@ public:
 		TSubclassOf<UActionBrainComponentAction> ActionClass = TActionClass::StaticClass();
 		return NewObject<TActionClass>(World, ActionClass);
 	}
+
+public:
+	UPROPERTY(BlueprintAssignable, Category = Action)
+	FActionFinishedSignature OnActionFinished;
 
 protected:
 	FORCEINLINE void TickAction(float DeltaTime)
@@ -116,6 +127,7 @@ protected:
 	/** starts or resumes action, depending on internal state */
 	bool Activate();
 	void OnPopped();
+	void CleanUp();
 
 	UFUNCTION(BlueprintCallable, Category = Action)
 	virtual void Finish(TEnumAsByte<EPawnActionResult::Type> WithResult);
@@ -165,7 +177,7 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = Action, meta = (DisplayName = "On Resume"))
 	void K2_Resume();
 	UFUNCTION(BlueprintImplementableEvent, Category = Action, meta = (DisplayName = "On Finished"))
-	void K2_Finished();
+	void K2_Finished(EPawnActionResult::Type WithResult);
 
 
 private:
@@ -243,6 +255,9 @@ private:
 
 	/** set to true when action fails the initial Start call */
 	uint32 bFailedToStart : 1;
+
+	UPROPERTY(Transient)
+	UActionBrainDataObject* ActionDataObject = nullptr;
 
 protected:
 	/** TickAction will get called only if this flag is set. To be set in derived action's
